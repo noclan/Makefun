@@ -1,0 +1,23 @@
+v2 sweep log (exact simulator, ~/workspace/makefun/btc_sim.py, all four windows)
+Baseline v1: 0603 +6.624202 / 0828 +11.260776 / 2314 -4.703780 / 1439 0.000000
+
+Single-parameter sweeps (only 0603 / worst shown):
+TP2 120-250: no change anywhere (exit is HOLD, not TP)
+TRAIL2 40: 0603 +3.60, worst -4.84 | 50: +2.52 / -1.87 | 60: +1.85 / -3.19
+  100: +6.62 / -3.40 | 120: +6.62 / -3.40 | 150: +6.62 / -3.40
+HOLD2 200: +4.60 / +0.00 | 240: +7.36 / +0.00 | 310: +6.28 / -4.70
+  320: +10.29 | 330: +9.48 | 340: +10.92 | 350: +11.05 | 355: +11.22
+  360: +12.76 | 365: +14.14 | 370: +13.49 | 380: +12.03 | 390: +11.24
+  400: +13.91 | 410: +12.42 | 420: +9.94 | 480: +4.79 (worst -4.70 throughout 320-410)
+RANGE_MIN 120: 0603 +8.77, worst -15.92 | 140: +5.78 / -15.31 | 160: +6.62 / -15.31 | 180: +6.62 / -4.70
+MAX2 3/4: 0603 unchanged, 0828 drops to +8.55
+LOW_AGE 15/20: 0603 unchanged, 2314 improves to -2.73 (alone)
+R30MIN 0: +5.07 | 10: +6.62 | 30: +6.83 | 40: 0 trades on 0603
+ABOVE2 60: 0603 0 trades | 100: +2.60 / worst -5.95 | 120: +3.03 / -5.95 | 150: +3.03 / +0.00
+
+Combos on HOLD2=360:
++ TRAIL2=100: 2314 -7.02 FAIL | + LOW_AGE=20: 2314 -5.56 FAIL
++ R30MIN=30: 0603 +12.80, worst -4.70 PASS (marginal, not shipped)
++ TP2=200/220: no change | + MAX2=3: 0603 unchanged, 0828 +8.55
++ R240_MAX1=50/80: no change | =100: 0603 +2.78 FAIL | =120: +3.15 FAIL
++ HOLD1=240/300/360, TP1, TRAIL1: no change on 0603
