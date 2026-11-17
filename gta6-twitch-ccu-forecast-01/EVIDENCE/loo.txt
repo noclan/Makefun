@@ -1,0 +1,24 @@
+p00 curves complete: 37 rolling-like pool: 15
+main.extract_curves: 37; select_pool(p00 case): 15
+MODEL LOO mean pinball: 0.161089 (n=15)
+  Monster Hunter Wilds                     0.4368
+  Elden Ring Nightreign                    0.2284
+  Saros                                    0.2190
+  The Legend of Zelda: Tears of the Kingdo 0.1834
+  Call of Duty: Black Ops 6                0.1810
+  FINAL FANTASY VII REBIRTH                0.1738
+  Stellar Blade                            0.1506
+  Cyberpunk 2077                           0.1325
+  Ghost of Yōtei                           0.1272
+  The Last of Us Part II                   0.1218
+  Call of Duty: Modern Warfare III         0.1078
+  Call of Duty: Black Ops 7                0.1045
+  Ghost of Tsushima                        0.0865
+  ELDEN RING                               0.0826
+  Call of Duty: Modern Warfare 4           0.0803
+STARTER LOO mean pinball (same set): 0.289823 (n=15)
+improvement vs starter: 0.1287
+p00 Marvel's Wolverine p1= 23357 complete= 37 pool= 15
+p01 Red Dead Redemption 2 p1= 116550 complete= 37 pool= 15
+p02 God of War Ragnarök p1= 269517 complete= 37 pool= 15
+p03 Marvel's Spider-Man 2 p1= 119087 complete= 37 pool= 15

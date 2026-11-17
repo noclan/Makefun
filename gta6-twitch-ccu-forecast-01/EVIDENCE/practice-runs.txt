@@ -1,0 +1,4 @@
+p00: runtime 0.11s, bytes 1446, rows 23, hours 2..24, quantiles valid, deterministic=True, p1 median h2=19395.03 h19=79185.31
+p01: runtime 0.12s, bytes 1523, rows 23, hours 2..24, quantiles valid, deterministic=True, p1 median h2=102717.46 h19=225096
+p02: runtime 0.10s, bytes 1547, rows 23, hours 2..24, quantiles valid, deterministic=True, p1 median h2=245021.43 h19=388146.44
+p03: runtime 0.10s, bytes 1525, rows 23, hours 2..24, quantiles valid, deterministic=True, p1 median h2=105037.11 h19=228268.57
