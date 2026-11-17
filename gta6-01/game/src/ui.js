@@ -1,7 +1,7 @@
-// Menus and saving: the title screen, pause, busted and wasted screens, and
-// the localStorage save (cash, mission progress, shells, respect). Saving is
-// quiet and frequent — after every mission and every shell — so a busted
-// Rico never loses more than a few minutes of progress.
+// Menus and saving: the title screen, pause, busted and wasted screens,
+// and the localStorage save (cash, mission progress, shells, respect).
+// Saving is quiet and frequent — after every mission and every shell — so
+// a busted Rico never loses more than a few minutes of progress.
 
 import { FONT, PALETTE, SAVE_KEY } from './config.js';
 
@@ -107,7 +107,7 @@ export function drawPaused(ctx, view) {
 }
 
 export function drawBusted(ctx, view, cashLost) {
-  panel(ctx, view.width, view.height, 'BUSTED', [`The Solmar PD caught up with you.`, `Bail and fines: $${cashLost}.`, 'Mama Rosa is not impressed.'], 'Press Enter to try again', '#7fb8d8');
+  panel(ctx, view.width, view.height, 'BUSTED', ['The Solmar PD caught up with you.', `Bail and fines: $${cashLost}.`, 'Mama Rosa is not impressed.'], 'Press Enter to try again', '#7fb8d8');
 }
 
 export function drawWasted(ctx, view, cashLost) {

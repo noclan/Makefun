@@ -1,6 +1,6 @@
-// Rico Vega on foot: WASD movement with a run key, punching, and getting in
-// and out of cars. Stealing a car is a crime — the wanted system hears about
-// it — and a cop car is only ever obtained by stealing one.
+// Rico Vega on foot: WASD movement with a run key, punching, and getting
+// in and out of cars. Stealing a car is a crime — the wanted system hears
+// about it — and a cop car is only ever obtained by stealing one.
 
 import { PLAYER, WANTED } from './config.js';
 import { clampToWorld, collideBuildings, inSea } from './world.js';
@@ -24,8 +24,8 @@ export function createPlayer(x, y) {
   };
 }
 
-// One fixed step on foot. Returns a small event object the game loop reacts
-// to (a punch landing, a car stolen, a shell picked up).
+// One fixed step on foot. Returns a small event object the game loop
+// reacts to (a punch landing, a car stolen, a shell picked up).
 export function stepPlayerOnFoot(g, dt, input) {
   const p = g.player;
   const events = { punched: null, stole: null, shell: false };
@@ -62,8 +62,8 @@ export function stepPlayerOnFoot(g, dt, input) {
   if (p.hurtTimer > 0) p.hurtTimer -= dt;
   if (p.invulnerable > 0) p.invulnerable -= dt;
 
-  // Punching and interacting are read by the game loop from the same action
-  // flags, so this step never consumes them itself.
+  // Punching and interacting are read by the game loop from the same
+  // action flags, so this step never consumes them itself.
   return events;
 }
 

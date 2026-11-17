@@ -1,6 +1,6 @@
-// Combat: Rico's pistol, bullets, and the pickups scattered around Solmar
-// Bay — health kits, armour vests and ammo boxes. Shooting is loud: it
-// raises the heat and sends nearby pedestrians running.
+// Combat: Rico's pistol, bullets, and the pickups scattered around
+// Solmar Bay — health kits, armour vests and ammo boxes. Shooting is
+// loud: it raises the heat and sends nearby pedestrians running.
 
 import { PISTOL, WANTED } from './config.js';
 import { chance, pick, range } from './random.js';

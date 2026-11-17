@@ -1,6 +1,6 @@
-// A tiny seeded random source (mulberry32) plus the small helpers the rest of
-// the game leans on. One seed, one city: the same seed always builds the same
-// Solmar Bay, which is what makes the staged screenshots repeatable.
+// A small seeded random source (mulberry32) and the helpers the rest of
+// the game leans on. One seed, one city: the same seed always builds the
+// same Solmar Bay, which is what makes the staged screenshots repeatable.
 
 export function makeRng(seed) {
   let state = seed | 0;

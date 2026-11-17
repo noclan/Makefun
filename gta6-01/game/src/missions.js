@@ -1,8 +1,14 @@
-// The story: six missions for Mama Rosa against the Varela crew, plus three
-// side activities (taxi fares, a beach street race, seashell collecting).
-// A mission is a list of stages; each stage has a place to reach, a thing to
-// do there, and a line of dialogue. Completing a stage pays in story; the
-// last stage of a mission pays in cash.
+// The story: six missions for Mama Rosa against the Varela crew, plus
+// three side activities (taxi fares, a beach street race, seashell
+// collecting). A mission is a list of stages; each stage has a place to
+// reach, a thing to do there, and a line of dialogue. Completing a stage
+// pays in story; the last stage of a mission pays in cash.
+//
+// v2: the first job is a real job. Rico starts on foot with no wheels, so
+// mission 1 makes him steal a car and then drive it across town to the
+// Old Town drop — it can never finish from twenty seconds of blind
+// walking. Some goto stages carry needsCar: arriving on foot only earns
+// a hint, not a completion.
 
 import { makeCar } from './vehicles.js';
 import { chance, range } from './random.js';
@@ -12,10 +18,11 @@ export const MISSIONS = [
     id: 'welcome-home',
     title: 'Welcome Home, Rico',
     giver: 'Mama Rosa',
-    brief: 'Five years away, and you come back the day the Varelas move in. Come see me at Café Luna.',
-    reward: 100,
+    brief: 'Five years away, and you come back the day the Varelas move in. Get wheels, then drive to the Old Town drop.',
+    reward: 150,
     stages: [
-      { type: 'goto', x: 480, y: 480, radius: 70, speaker: 'Mama Rosa', text: 'Rico! My boy. The Varelas think Solmar is theirs now. Prove them wrong — start by picking up my package at the marina.' },
+      { type: 'car', speaker: 'Mama Rosa', text: 'Rico! My boy. The Varelas think Solmar is theirs now. First things first — you need wheels. Any car on the street will do. Press E next to one.' },
+      { type: 'goto', x: 2080, y: 800, radius: 80, needsCar: true, hint: 'DRIVE TO THE OLD TOWN DROP', speaker: 'Mama Rosa', text: 'Good — you are mobile again. The drop is in Old Town, across the whole city. Drive like you mean it, and do not stop for the Varelas.' },
     ],
   },
   {
@@ -25,8 +32,8 @@ export const MISSIONS = [
     brief: 'Pick up the crate at the marina and drop it in Old Town. No police, no questions.',
     reward: 250,
     stages: [
-      { type: 'goto', x: 2880, y: 1760, radius: 70, speaker: 'Rico', text: 'Crate secured. Light as a feather — whatever Mama Rosa smuggles, it is not feathers.' },
-      { type: 'goto', x: 2080, y: 800, radius: 70, speaker: 'Mama Rosa', text: 'Delivered clean. The Varelas did not even notice. You still drive like a dream, Rico.' },
+      { type: 'goto', x: 2880, y: 1760, radius: 70, needsCar: true, hint: 'DRIVE TO THE MARINA CRATE', speaker: 'Rico', text: 'Crate secured. Light as a feather — whatever Mama Rosa smuggles, it is not feathers.' },
+      { type: 'goto', x: 2080, y: 800, radius: 70, needsCar: true, hint: 'DELIVER TO OLD TOWN', speaker: 'Mama Rosa', text: 'Delivered clean. The Varelas did not even notice. You still drive like a dream, Rico.' },
     ],
   },
   {
@@ -56,7 +63,7 @@ export const MISSIONS = [
     brief: 'A package for the safehouse, and the clock is running. Seventy-five seconds, Rico. Do not stop for red lights.',
     reward: 700,
     stages: [
-      { type: 'goto', x: 1120, y: 800, radius: 70, speaker: 'Rico', text: 'Package in hand. Seventy-five seconds to the safehouse — floor it.' },
+      { type: 'goto', x: 1120, y: 800, radius: 70, needsCar: true, hint: 'GRAB THE PACKAGE AT THE BANK', speaker: 'Rico', text: 'Package in hand. Seventy-five seconds to the safehouse — floor it.' },
       { type: 'timed', x: 2400, y: 2560, radius: 80, seconds: 75, speaker: 'Mama Rosa', text: 'You made it with time to spare. The Varelas are going to hate this.' },
     ],
   },
@@ -67,7 +74,7 @@ export const MISSIONS = [
     brief: 'The bank. The gold. The whole Solmar PD on your tail. Grab it, run, and do not look back until you are home.',
     reward: 1500,
     stages: [
-      { type: 'goto', x: 1120, y: 800, radius: 70, speaker: 'Rico', text: 'Gold in the bag. Alarms everywhere — this is going to be a loud drive home.' },
+      { type: 'goto', x: 1120, y: 800, radius: 70, needsCar: true, hint: 'HIT THE BANK, GRAB THE GOLD', speaker: 'Rico', text: 'Gold in the bag. Alarms everywhere — this is going to be a loud drive home.' },
       { type: 'escape', speaker: 'Mama Rosa', text: 'Bring that gold to the safehouse, Rico. Every cop in Solmar is behind you.' },
     ],
   },
@@ -89,6 +96,17 @@ export function markerFor(g) {
   if (!stage) return null;
   if (stage.type === 'tail' && g.tailCar) return { x: g.tailCar.x, y: g.tailCar.y };
   if (stage.type === 'escape') return { x: g.city.landmarks.safehouse.x, y: g.city.landmarks.safehouse.y };
+  if (stage.type === 'car') {
+    // Point at the closest stealable car so the player is never lost.
+    let best = null;
+    let bestD = Infinity;
+    for (const car of g.cars) {
+      if (car.driver === 'player') continue;
+      const d = Math.hypot(car.x - g.player.x, car.y - g.player.y);
+      if (d < bestD) { best = car; bestD = d; }
+    }
+    return best ? { x: best.x, y: best.y } : null;
+  }
   return { x: stage.x, y: stage.y };
 }
 
@@ -101,7 +119,7 @@ function completeStage(g) {
   const stage = currentStage(g);
   // Arrival stages speak when Rico gets there; tail and escape stages spoke
   // when they started, so they stay quiet at the end.
-  if (stage && stage.text && (stage.type === 'goto' || stage.type === 'timed')) {
+  if (stage && stage.text && (stage.type === 'goto' || stage.type === 'timed' || stage.type === 'car')) {
     say(g, stage.speaker || m.giver, stage.text, 4.5);
   }
   g.mission.stage += 1;
@@ -181,6 +199,7 @@ export function startMissionStage(g) {
     g.wanted.lastCrime = g.time;
   }
   if (stage.speaker && stage.type !== 'goto') say(g, stage.speaker, stage.text, 4);
+  if (stage.type === 'car') say(g, stage.speaker, stage.text, 5);
 }
 
 export function stepMissions(g, dt) {
@@ -191,6 +210,12 @@ export function stepMissions(g, dt) {
   if (!stage) return;
   const p = g.player;
 
+  // A 'car' stage ends the moment Rico is behind a wheel.
+  if (stage.type === 'car') {
+    if (p.car) completeStage(g);
+    return;
+  }
+
   if (stage.type === 'goto' || stage.type === 'timed') {
     if (stage.type === 'timed') {
       g.mission.timer += dt;
@@ -200,7 +225,13 @@ export function stepMissions(g, dt) {
       }
     }
     const d = Math.hypot(p.x - stage.x, p.y - stage.y);
-    if (d < stage.radius) completeStage(g);
+    if (d >= stage.radius) return;
+    // Some jobs need wheels: arriving on foot earns a hint, not a pass.
+    if (stage.needsCar && !p.car) {
+      g.mission.hint = 'You need a car for this job — press E near one.';
+      return;
+    }
+    completeStage(g);
     return;
   }
 

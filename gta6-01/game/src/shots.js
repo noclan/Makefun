@@ -1,8 +1,13 @@
 // The staged screenshot scenes behind ?shot=chase|downtown|mission|dusk.
-// Each one plays the real rules forward from a fresh seeded game for a fixed
-// number of steps, steered by a small autopilot that drives along the road
-// grid, so the frame is what a short game really looks like and the same
-// seed always gives the same frame.
+// Each one plays the real rules forward from a fresh seeded game for a
+// fixed number of steps, steered by a small autopilot that drives along
+// the road grid, so the frame is what a short game really looks like and
+// the same seed always gives the same frame.
+//
+// v2 staging: the cover is a beachfront sunset chase (sand, sea, palms
+// and a lifeguard tower in frame, three stars, two cruisers, the police
+// helicopter overhead); the mission shot shows Mama Rosa's dialogue bar;
+// the dusk shot shows neon signs and headlight cones.
 
 import { START_CLOCK, STEP } from './config.js';
 import { makeCar } from './vehicles.js';
@@ -59,6 +64,31 @@ function driveFor(g, input, steps) {
   input.release('KeyD');
 }
 
+// Drive east along one road for `steps` fixed steps: hold the gas and
+// steer back toward the road centreline, never turning at intersections,
+// so a beachfront chase stays on the beachfront.
+function driveEast(g, input, steps, roadY) {
+  input.press('KeyW');
+  for (let i = 0; i < steps; i += 1) {
+    const car = g.player.car;
+    if (car) {
+      const want = Math.atan2(roadY - car.y, 240);
+      let diff = want - car.angle;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      const steer = Math.max(-1, Math.min(1, diff * 2.5));
+      if (steer > 0.2) input.press('KeyD');
+      else input.release('KeyD');
+      if (steer < -0.2) input.press('KeyA');
+      else input.release('KeyA');
+    }
+    stepGame(g, STEP, input);
+  }
+  input.release('KeyW');
+  input.release('KeyA');
+  input.release('KeyD');
+}
+
 // Walk on foot toward a point for `steps` fixed steps.
 function walkToward(g, input, tx, ty, steps) {
   for (let i = 0; i < steps; i += 1) {
@@ -104,64 +134,84 @@ function addCopCar(g, x, y, angle) {
 }
 
 function livenStreet(g, x, y) {
-  for (const car of spawnTraffic(g.rng, g.city, 6, x, y)) g.cars.push(car);
-  for (const ped of spawnPeds(g.rng, g.city, 8, x, y)) g.peds.push(ped);
+  // A busy street for the camera: ten extra cars, fourteen extra walkers.
+  for (const car of spawnTraffic(g.rng, g.city, 10, x, y)) g.cars.push(car);
+  for (const ped of spawnPeds(g.rng, g.city, 14, x, y)) g.peds.push(ped);
 }
 
 export function stageShot(name, g) {
   const input = scriptedInput();
   if (name === 'chase') {
-    // Sunset police chase: Rico in the Veloce GT, three stars, two cruisers
-    // on his tail, traffic ahead, mission 4 on the banner.
+    // Cover: sunset police chase down the beachfront road. Rico in the
+    // Veloce GT, three stars, two cruisers on his tail, the police
+    // helicopter overhead, sand and sea along the bottom of the frame.
     g.clockOffset = 18.2 - START_CLOCK;
     g.mission.index = 3;
     g.mission.stage = 0;
     g.wanted.heat = 65;
-    putPlayerInCar(g, 'sports', 1120, 480, 0);
-    addCopCar(g, 1030, 480, 0);
-    addCopCar(g, 980, 502, 0);
-    livenStreet(g, 1120, 480);
-    driveFor(g, input, 150);
+    g.player.cash = 18450;
+    g.player.respect = 55;
+    putPlayerInCar(g, 'sports', 1120, 2720, 0);
+    addCopCar(g, 1030, 2720, 0);
+    addCopCar(g, 980, 2742, 0);
+    livenStreet(g, 1120, 2720);
+    driveEast(g, input, 130, 2720);
+    g.dialogue = { speaker: 'Mama Rosa', text: 'Three stars, Rico! Lose them on the beach road — the helicopter cannot follow you into the old town alleys.', timer: 999 };
     return g;
   }
   if (name === 'downtown') {
     // Golden-hour cruise through downtown: sedan, traffic, pedestrians,
-    // towers, mission 1 pointing at Café Luna.
+    // towers with shop signs, mission 1 pointing at the Old Town drop.
     g.clockOffset = 17.6 - START_CLOCK;
     g.mission.index = 0;
-    g.mission.stage = 0;
+    g.mission.stage = 1;
     g.wanted.heat = 0;
+    g.player.cash = 1250;
+    g.player.respect = 12;
     putPlayerInCar(g, 'sedan', 1120, 800, 0);
     livenStreet(g, 1120, 800);
     driveFor(g, input, 100);
+    g.dialogue = { speaker: 'Mama Rosa', text: 'Good — you are mobile again. The drop is in Old Town, across the whole city. Drive like you mean it, and do not stop for the Varelas.', timer: 999 };
     return g;
   }
   if (name === 'mission') {
     // On foot at the marina: Rico walking to the crate, pistol ready, a
-    // cruiser closing in, mission 2 on the banner.
+    // cruiser closing in, Mama Rosa talking him through it. The camera
+    // sits close to the bay so the water reads on the right of the frame.
     g.clockOffset = 16.9 - START_CLOCK;
     g.mission.index = 1;
     g.mission.stage = 0;
     g.wanted.heat = 15;
-    g.player.x = 2600;
+    g.player.cash = 3400;
+    g.player.respect = 22;
+    g.player.x = 2700;
     g.player.y = 1760;
     g.player.angle = 0;
-    g.camera.x = 2600;
+    g.camera.x = 2700;
     g.camera.y = 1760;
-    addCopCar(g, 2400, 1400, 0);
-    livenStreet(g, 2600, 1760);
-    walkToward(g, input, 2880, 1760, 40);
+    livenStreet(g, 2700, 1760);
+    // Stop a good hundred metres short of the crate: the camera clamps
+    // at the east edge, so Rico must not end up underneath the marker.
+    walkToward(g, input, 2880, 1760, 25);
+    // The cruiser arrives after the walk, so it reads as closing in
+    // instead of piling on top of Rico.
+    addCopCar(g, 2550, 1760, 0);
+    g.dialogue = { speaker: 'Mama Rosa', text: 'The crate is at the end of the pier, Rico. Quiet feet. If a cruiser spots you, run for the alleys, not the water.', timer: 999 };
     return g;
   }
   if (name === 'dusk') {
-    // Night on the beachfront: taxi headlights, neon, one star, mission 5.
+    // Night on the beachfront: taxi headlights, neon signs, one star,
+    // mission 5 on the banner, the sea black beyond the sand.
     g.clockOffset = 20.4 - START_CLOCK;
     g.mission.index = 4;
     g.mission.stage = 0;
     g.wanted.heat = 15;
+    g.player.cash = 7200;
+    g.player.respect = 48;
     putPlayerInCar(g, 'taxi', 1120, 2720, 0);
     livenStreet(g, 1120, 2720);
-    driveFor(g, input, 150);
+    driveEast(g, input, 130, 2720);
+    g.dialogue = { speaker: 'Mama Rosa', text: 'The package is at the bank, Rico. Seventy-five seconds to the safehouse once you grab it — and the whole PD is awake tonight.', timer: 999 };
     return g;
   }
   // Any other name is the downtown cruise.

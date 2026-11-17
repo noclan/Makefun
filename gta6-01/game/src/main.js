@@ -1,7 +1,7 @@
-// Boot and the one loop: input is read every frame, the world advances in
-// fixed 1/60 s steps, and the renderer paints what is there. The game moves
-// between five screens — title, play, paused, busted, wasted — and the title
-// screen runs the city behind it as a living backdrop.
+// Boot and the one loop: input is read every frame, the world advances
+// in fixed 1/60 s steps, and the renderer paints what is there. The game
+// moves between five screens — title, play, paused, busted, wasted — and
+// the title screen runs the city behind it as a living backdrop.
 //
 // ?seed=N fixes the city. ?shot=chase|downtown|mission|dusk (with &seed=N)
 // stages that scene instead of running the loop, paints it twice and sets
@@ -69,7 +69,7 @@ function runGame() {
     screen = SCREEN_PLAY;
     audio.unlock();
     window.__solmarGame = g;
-    announce(useSave ? 'Welcome back to Solmar Bay.' : 'Welcome to Solmar Bay. Drive to Café Luna.');
+    announce(useSave ? 'Welcome back to Solmar Bay.' : 'Welcome to Solmar Bay. Steal a car, then drive to the Old Town drop.');
   }
 
   function openTitle() {

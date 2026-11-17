@@ -31,9 +31,9 @@ export function resetCarIds() {
   nextCarId = 1;
 }
 
-// Arcade driving: accelerate along the heading, steer harder the faster the
-// car goes (up to a point), bleed speed sideways with grip, and slow down
-// off-road and on sand. Returns nothing; the car record is mutated.
+// Arcade driving: accelerate along the heading, steer harder the faster
+// the car goes (up to a point), bleed speed sideways with grip, and slow
+// down off-road and on sand. Returns nothing; the car record is mutated.
 export function stepCar(car, throttle, steer, dt, effects) {
   const spec = CAR_TYPES[car.type];
   const forward = car.speed >= 0 ? 1 : -1;
@@ -99,8 +99,8 @@ export function collideCarWithBuildings(city, car, effects) {
   return true;
 }
 
-// Scatter parked cars along the roads, close to the kerb, for the player to
-// steal. Never on the beach, never in the sea, never inside a building.
+// Scatter parked cars along the roads, close to the kerb, for the player
+// to steal. Never on the beach, never in the sea, never inside a building.
 export function spawnParkedCars(rng, city, count) {
   const cars = [];
   const types = ['sedan', 'sedan', 'taxi', 'van', 'sports'];

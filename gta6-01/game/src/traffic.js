@@ -1,6 +1,8 @@
-// Traffic: cars that follow the road grid, turn at intersections, slow for
-// the car ahead and get out of the way — loosely. They keep the city alive
-// and give the player something to weave through.
+// Traffic: cars that follow the road grid, turn at intersections, slow
+// for the car ahead and get out of the way — loosely. They keep the city
+// alive and give the player something to weave through. v2 runs a busier
+// city: more cars on the road, and the top-up near the player is quicker,
+// so the streets never look empty in a screenshot or in live play.
 
 import { CAR_TYPES, WORLD } from './config.js';
 import { chance, pick, range } from './random.js';
@@ -38,8 +40,9 @@ export function spawnTraffic(rng, city, count, nearX, nearY) {
   return cars;
 }
 
-// Steer a traffic car along its road: aim at a point ahead on the centreline
-// (shifted by its lane), and at an intersection sometimes pick a new road.
+// Steer a traffic car along its road: aim at a point ahead on the
+// centreline (shifted by its lane), and at an intersection sometimes pick
+// a new road.
 export function trafficSteer(rng, car, dt) {
   const ahead = 90;
   const tx = car.x + Math.cos(car.angle) * ahead;
@@ -84,17 +87,21 @@ export function stepTraffic(g, dt) {
     if (Math.abs(car.speed) > car.cruise) throttle = Math.min(throttle, 0);
     stepCar(car, throttle, steer, dt, g.effects);
     collideCarWithBuildings(g.city, car, g.effects);
-    // A traffic car that ends up far off-road or beached gets towed back to
-    // a road so the grid never empties out.
+    // A traffic car that ends up far off-road or beached gets towed back
+    // to a road so the grid never empties out.
     if (!onRoad(car.x, car.y) && Math.abs(car.speed) < 20) {
       const road = nearestRoadPoint(car.x, car.y);
       car.x = road.x;
       car.y = road.y;
     }
   }
-  // Top the traffic back up near the player so the streets stay busy.
+  // Top the traffic back up near the player so the streets stay busy:
+  // at least fourteen cars within nine hundred units, refilled often —
+  // but never more than thirty-six traffic cars in the whole city, so a
+  // long session cannot spawn cars without end.
   const near = g.cars.filter((c) => c.driver === 'traffic' && Math.hypot(c.x - g.player.x, c.y - g.player.y) < 900).length;
-  if (near < 8 && rng() < 0.02) {
+  const trafficTotal = g.cars.filter((c) => c.driver === 'traffic').length;
+  if (near < 14 && trafficTotal < 36 && rng() < 0.05) {
     const fresh = randomRoadCar(rng, g.city, g.player.x, g.player.y);
     if (Math.hypot(fresh.x - g.player.x, fresh.y - g.player.y) > 500) {
       g.cars.push(fresh);

@@ -1,9 +1,9 @@
 // Sound, all synthesized with WebAudio — no audio files, no network. An
-// engine hum that follows the car's speed, two-tone sirens when the heat is
-// on, gunshots, pickup blips, a mission jingle, and a slow synthwave bass
-// loop for the drive. Everything is guarded: in a headless screenshot run
-// there is no user gesture, so the context may stay suspended and every call
-// must simply do nothing.
+// engine hum that follows the car's speed, two-tone sirens when the heat
+// is on, gunshots, pickup blips, a mission jingle, and a slow synthwave
+// bass loop for the drive. Everything is guarded: in a headless screenshot
+// run there is no user gesture, so the context may stay suspended and
+// every call must simply do nothing.
 
 export function createAudio() {
   let ctx = null;

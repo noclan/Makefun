@@ -1,6 +1,6 @@
 // Juice: particles, skid marks, floating score text and the camera shake.
-// Everything here is cosmetic — the sim never reads it — but it is what makes
-// a crash feel like a crash and a pickup feel like a reward.
+// Everything here is cosmetic — the sim never reads it — but it is what
+// makes a crash feel like a crash and a pickup feel like a reward.
 
 export function createEffects(rng) {
   const particles = [];

@@ -1,9 +1,11 @@
-// The wanted system: heat from crimes, stars on the HUD, and the Solmar PD
-// answering in proportion. Foot cops run the player down; at three stars and
-// up they bring cruisers. Get busted (a cop reaches Rico on foot while he is
-// slow) or wasted (health hits zero) and the day costs money.
+// The wanted system: heat from crimes, stars on the HUD, and the Solmar
+// PD answering in proportion. Foot cops run the player down; at three
+// stars and up they bring cruisers — and a helicopter that circles above
+// Rico with a searchlight, so the heat is visible from anywhere on the
+// map. Get busted (a cop reaches Rico on foot while he is slow) or wasted
+// (health hits zero) and the day costs money.
 
-import { WANTED } from './config.js';
+import { HELI, WANTED } from './config.js';
 import { chance, pick, range } from './random.js';
 import { collideBuildings, nearestRoadPoint, onRoad } from './world.js';
 import { makeCar, stepCar, collideCarWithBuildings } from './vehicles.js';
@@ -58,6 +60,27 @@ function wantedTarget(g) {
   return { foot: footWant, cars: carWant };
 }
 
+// The helicopter orbits the player once the heat hits three stars. It is
+// a visible system, not a weapon: it circles, it shines its spotlight on
+// Rico, and it leaves when the heat drops.
+export function stepHeli(g, dt) {
+  const heli = g.heli;
+  if (g.wanted.stars >= HELI.minStars) {
+    if (!heli.active) {
+      heli.active = true;
+      // Start the orbit north-west of the player so the aircraft is in
+      // frame, clear of the dialogue bar, from the moment it arrives.
+      heli.orbit = Math.PI * 1.25;
+    }
+    heli.orbit += HELI.orbitSpeed * dt;
+    heli.x = g.player.x + Math.cos(heli.orbit) * HELI.orbitRadius;
+    heli.y = g.player.y + Math.sin(heli.orbit) * HELI.orbitRadius - 40;
+    heli.angle = Math.atan2(g.player.y - heli.y, g.player.x - heli.x);
+  } else {
+    heli.active = false;
+  }
+}
+
 export function stepPolice(g, dt) {
   const rng = g.rng;
   const w = g.wanted;
@@ -74,6 +97,7 @@ export function stepPolice(g, dt) {
     w.quietTimer = 0;
   }
   w.stars = starsFromHeat(w.heat);
+  stepHeli(g, dt);
 
   // Keep the responding force at the level the stars demand.
   const target = wantedTarget(g);

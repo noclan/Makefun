@@ -1,10 +1,11 @@
 // The game itself: one state object, one fixed step. createGame builds a
 // fresh Solmar Bay from a seed; stepGame advances it by 1/60 s from the
 // player's input. Every system — driving, traffic, pedestrians, police,
-// missions, combat — is called from here, in an order that keeps cause and
-// effect straight (the player acts, the world reacts, the effects follow).
+// the helicopter, missions, combat — is called from here, in an order that
+// keeps cause and effect straight (the player acts, the world reacts, the
+// effects follow).
 
-import { CLOCK_RATE, PLAYER, START_CLOCK, WORLD } from './config.js';
+import { CLOCK_RATE, DISTRICTS, PARKED_COUNT, PED_COUNT, PLAYER, RADIO, START_CLOCK, TRAFFIC_COUNT, WORLD } from './config.js';
 import { makeRng } from './random.js';
 import { buildCity, clampToWorld, districtAt } from './world.js';
 import { createEffects } from './particles.js';
@@ -38,6 +39,8 @@ export function createGame(seed) {
     bullets: [],
     pickups: [],
     wanted: { heat: 0, stars: 0, quietTimer: 0, lastCrime: -99 },
+    heli: { active: false, x: 0, y: 0, angle: 0, orbit: 0 },
+    radio: { station: RADIO.station, track: RADIO.tracks[0], trackIndex: 0, trackTimer: 0 },
     mission: { index: 0, stage: 0, timer: 0, outOfRange: 0, failed: false, failReason: '', hint: '' },
     dialogue: null,
     hudMessage: '',
@@ -46,6 +49,7 @@ export function createGame(seed) {
     hint: '',
     camera: { x: 480, y: 800 },
     districtName: 'Downtown',
+    districtTag: DISTRICTS.downtown.tagline,
     shellsFound: 0,
     fare: null,
     race: null,
@@ -57,9 +61,9 @@ export function createGame(seed) {
     attract: false,
     aimWorld: null,
   };
-  g.cars = spawnParkedCars(rng, city, 10);
-  g.cars.push(...spawnTraffic(rng, city, 16, g.player.x, g.player.y));
-  g.peds = spawnPeds(rng, city, 26, g.player.x, g.player.y);
+  g.cars = spawnParkedCars(rng, city, PARKED_COUNT);
+  g.cars.push(...spawnTraffic(rng, city, TRAFFIC_COUNT, g.player.x, g.player.y));
+  g.peds = spawnPeds(rng, city, PED_COUNT, g.player.x, g.player.y);
   g.pickups = spawnPickups(rng, city, 10);
   g.save = () => writeSave(g);
   startMissionStage(g);
@@ -67,11 +71,14 @@ export function createGame(seed) {
 }
 
 function updateDistrict(g) {
-  const bx = Math.floor((g.player.x - WORLD.firstRoad) / WORLD.roadGap);
-  const by = Math.floor((g.player.y - WORLD.firstRoad) / WORLD.roadGap);
+  // Round to the nearest block: a player on the road between two blocks
+  // belongs to the closer one, so the beach road reads as beachfront.
+  const bx = Math.round((g.player.x - WORLD.firstRoad) / WORLD.roadGap);
+  const by = Math.round((g.player.y - WORLD.firstRoad) / WORLD.roadGap);
   const key = districtAt(bx, by);
-  const names = { downtown: 'Downtown', oldtown: 'Old Town', beachfront: 'Beachfront', marina: 'Marina', hills: 'Palm Hills', midtown: 'Midtown' };
+  const names = { downtown: 'Downtown', oldtown: 'Old Town', beachfront: 'Palmline Beach', marina: 'Marina', hills: 'Palm Hills', midtown: 'Midtown' };
   g.districtName = names[key] || 'Solmar Bay';
+  g.districtTag = (DISTRICTS[key] && DISTRICTS[key].tagline) || 'SUN, SAND AND BAD DECISIONS';
 }
 
 function interact(g) {
@@ -163,8 +170,8 @@ function resolveWasted(g) {
 }
 
 // Cars are solid: two of them can never share the same patch of road. A
-// light push-apart each step keeps fender-benders looking like fender-benders
-// instead of one car swallowing the other.
+// light push-apart each step keeps fender-benders looking like
+// fender-benders instead of one car swallowing the other.
 function separateCars(g) {
   const cars = g.cars;
   for (let i = 0; i < cars.length; i += 1) {
@@ -240,12 +247,22 @@ function stepOnFootHazards(g, dt) {
       if (g.audio) g.audio.crash();
     }
   }
-  // A foot cop leaning on Rico wears his health down; if Rico stops running,
-  // the busted check in the police step ends the chase.
+  // A foot cop leaning on Rico wears his health down; if Rico stops
+  // running, the busted check in the police step ends the chase.
   for (const cop of g.cops) {
     if (cop.kind !== 'cop' || cop.down) continue;
     const d = Math.hypot(cop.x - p.x, cop.y - p.y);
     if (d < 30 && p.speed >= 80) hurtPlayer(g, 6 * dt * 10, cop.x, cop.y);
+  }
+}
+
+function stepRadio(g, dt) {
+  const radio = g.radio;
+  radio.trackTimer += dt;
+  if (radio.trackTimer >= RADIO.trackSeconds) {
+    radio.trackTimer = 0;
+    radio.trackIndex = (radio.trackIndex + 1) % RADIO.tracks.length;
+    radio.track = RADIO.tracks[radio.trackIndex];
   }
 }
 
@@ -264,8 +281,8 @@ export function stepGame(g, dt, input) {
   if (g.over) return;
 
   if (g.attract) {
-    // Title-screen backdrop: the camera drifts over downtown while the city
-    // lives its life behind the menu.
+    // Title-screen backdrop: the camera drifts over downtown while the
+    // city lives its life behind the menu.
     g.camera.x = 1120 + Math.cos(g.time * 0.05) * 500;
     g.camera.y = 1120 + Math.sin(g.time * 0.05) * 500;
     stepTraffic(g, dt);
@@ -314,6 +331,7 @@ export function stepGame(g, dt, input) {
   stepTaxi(g, dt);
   stepRace(g, dt);
   stepShells(g);
+  stepRadio(g, dt);
   g.effects.step(dt);
   if (g.audio) g.audio.update(g, dt);
 
@@ -332,6 +350,9 @@ export function stepGame(g, dt, input) {
       g.hint = 'Wrecked! Press E to get out and find another car';
     }
   }
+  // A job that needs wheels says so while Rico is on foot at the marker.
+  if (!p.car && g.mission.hint) g.hint = g.mission.hint;
+  else if (p.car) g.mission.hint = '';
 
   // Health trickles back once the heat is off.
   if (g.wanted.stars === 0 && p.health > 0 && p.health < PLAYER.health) {

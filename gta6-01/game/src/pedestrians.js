@@ -1,6 +1,8 @@
 // Pedestrians: they walk the sidewalks, cross at intersections, chat in
 // barks, and run screaming from gunfire, crashes and stolen cars. A few of
-// them are taxi customers, waiting on a kerb with their hand out.
+// them are taxi customers, waiting on a kerb with their hand out. v2
+// keeps far more of them on the sidewalks near the player, so a frame is
+// never a desert of empty pavement.
 
 import { WORLD } from './config.js';
 import { chance, pick, range } from './random.js';
@@ -121,8 +123,9 @@ export function stepPeds(g, dt) {
       }
     }
   }
-  // A thin trickle of fresh pedestrians keeps the sidewalks populated.
-  if (g.peds.length < 22 && rng() < 0.01) {
+  // A steady trickle of fresh pedestrians keeps the sidewalks populated:
+  // never let the crowd fall below forty.
+  if (g.peds.length < 40 && rng() < 0.03) {
     const fresh = spawnPeds(rng, g.city, 1, g.player.x, g.player.y);
     for (const ped of fresh) g.peds.push(ped);
   }

@@ -1,7 +1,8 @@
 // Keyboard + mouse state. Held keys are read every step; one-shot presses
-// (confirm, pause, interact, punch, shoot, mute) are queued as bit flags and
-// taken once by the loop, so a press between two frames is never lost and
-// never counted twice. The mouse position is tracked for aiming the pistol.
+// (confirm, pause, interact, punch, shoot, mute) are queued as bit flags
+// and taken once by the loop, so a press between two frames is never lost
+// and never counted twice. The mouse position is tracked for aiming the
+// pistol.
 
 export const ACT_CONFIRM = 1;
 export const ACT_PAUSE = 2;
@@ -105,10 +106,10 @@ export function createInput(canvas) {
     tap(action) {
       actions |= action;
     },
-    // The one-shot presses since the last call, as ACT_* flags. With a mask,
-    // only those flags are taken; the rest stay queued for the next caller.
-    // The main loop takes CONFIRM and PAUSE here; the game step takes the
-    // rest, so a press is never eaten by the wrong layer.
+    // The one-shot presses since the last call, as ACT_* flags. With a
+    // mask, only those flags are taken; the rest stay queued for the next
+    // caller. The main loop takes CONFIRM and PAUSE here; the game step
+    // takes the rest, so a press is never eaten by the wrong layer.
     takeActions(mask) {
       const wanted = mask === undefined ? 0xffffffff : mask;
       const taken = actions & wanted;
