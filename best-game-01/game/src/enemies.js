@@ -131,16 +131,29 @@ export function createBots(random) {
     context.translate(b.x, b.y);
     context.scale(spawnScale, spawnScale);
     const flash = b.flash > 0;
+    // Soft glow under every bot so the swarm reads against the dark grid at a
+    // glance — the v1 silhouettes were correct but too quiet at screenshot size.
+    const glowR = b.kind === KIND_BOSS ? 70 : 34;
+    const glow = context.createRadialGradient(0, 0, 2, 0, 0, glowR);
+    const glowColor = b.kind === KIND_BOSS ? '250, 204, 21' : b.kind === KIND_ZIPPER ? '250, 204, 21'
+      : b.kind === KIND_BRUTE ? '239, 68, 68' : b.kind === KIND_SPLITTER ? '167, 139, 250' : '249, 115, 22';
+    glow.addColorStop(0, `rgba(${glowColor}, 0.30)`);
+    glow.addColorStop(1, `rgba(${glowColor}, 0)`);
+    context.fillStyle = glow;
+    context.beginPath();
+    context.arc(0, 0, glowR, 0, Math.PI * 2);
+    context.fill();
     if (b.kind === KIND_CRAWLER) {
-      // Tracked box: square body, tread strips, red eye.
+      // Tracked box: square body, tread strips, red eye. Drawn larger than the
+      // hitbox on purpose — the box is the readable shape, the radius is the rule.
       context.fillStyle = flash ? '#ffffff' : BOT.crawler.color;
-      context.fillRect(-13, -13, 26, 26);
+      context.fillRect(-16, -16, 32, 32);
       context.fillStyle = '#0f172a';
-      context.fillRect(-13, -9, 26, 4);
-      context.fillRect(-13, 5, 26, 4);
+      context.fillRect(-16, -11, 32, 5);
+      context.fillRect(-16, 6, 32, 5);
       context.fillStyle = '#ef4444';
       context.beginPath();
-      context.arc(4, 0, 4, 0, Math.PI * 2);
+      context.arc(5, 0, 5, 0, Math.PI * 2);
       context.fill();
     } else if (b.kind === KIND_ZIPPER) {
       // Dart: triangle pointing at the player, yellow with a dark spine. While it
@@ -150,14 +163,14 @@ export function createBots(random) {
       const winding = b.windup > 0;
       context.fillStyle = flash || (winding && Math.floor(time * 12) % 2 === 0) ? '#ffffff' : BOT.zipper.color;
       context.beginPath();
-      context.moveTo(15, 0);
-      context.lineTo(-10, -9);
-      context.lineTo(-5, 0);
-      context.lineTo(-10, 9);
+      context.moveTo(19, 0);
+      context.lineTo(-12, -11);
+      context.lineTo(-6, 0);
+      context.lineTo(-12, 11);
       context.closePath();
       context.fill();
       context.fillStyle = '#0f172a';
-      context.fillRect(-6, -1.5, 12, 3);
+      context.fillRect(-7, -2, 14, 4);
       if (winding) {
         context.rotate(-angle);
         context.fillStyle = '#ef4444';
@@ -171,8 +184,8 @@ export function createBots(random) {
       context.beginPath();
       for (let k = 0; k < 6; k += 1) {
         const a = (k / 6) * Math.PI * 2 + Math.PI / 6;
-        const px = Math.cos(a) * 22;
-        const py = Math.sin(a) * 22;
+        const px = Math.cos(a) * 26;
+        const py = Math.sin(a) * 26;
         if (k === 0) context.moveTo(px, py);
         else context.lineTo(px, py);
       }
@@ -180,13 +193,13 @@ export function createBots(random) {
       context.fill();
       context.fillStyle = '#0f172a';
       context.beginPath();
-      context.arc(0, 0, 10, 0, Math.PI * 2);
+      context.arc(0, 0, 12, 0, Math.PI * 2);
       context.fill();
       context.fillStyle = '#facc15';
       for (let k = 0; k < 3; k += 1) {
         const a = (k / 3) * Math.PI * 2 + time * 0.5;
         context.beginPath();
-        context.arc(Math.cos(a) * 15, Math.sin(a) * 15, 2.5, 0, Math.PI * 2);
+        context.arc(Math.cos(a) * 18, Math.sin(a) * 18, 3, 0, Math.PI * 2);
         context.fill();
       }
     } else if (b.kind === KIND_SPLITTER) {
@@ -194,12 +207,12 @@ export function createBots(random) {
       const a = time * 4;
       context.fillStyle = flash ? '#ffffff' : BOT.splitter.color;
       context.beginPath();
-      context.arc(Math.cos(a) * 6, Math.sin(a) * 6, 9, 0, Math.PI * 2);
-      context.arc(Math.cos(a + Math.PI) * 6, Math.sin(a + Math.PI) * 6, 9, 0, Math.PI * 2);
+      context.arc(Math.cos(a) * 7, Math.sin(a) * 7, 11, 0, Math.PI * 2);
+      context.arc(Math.cos(a + Math.PI) * 7, Math.sin(a + Math.PI) * 7, 11, 0, Math.PI * 2);
       context.fill();
       context.fillStyle = '#0f172a';
       context.beginPath();
-      context.arc(0, 0, 4, 0, Math.PI * 2);
+      context.arc(0, 0, 5, 0, Math.PI * 2);
       context.fill();
     } else {
       // VOLT WARDEN: crowned ring, rotating segments, volt core. HP shown as a ring arc.

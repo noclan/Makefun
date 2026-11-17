@@ -69,12 +69,34 @@ export function createRenderer(canvas) {
     context.lineTo(760, 120);
     context.lineTo(760, 600);
     context.lineTo(1280, 600);
+    context.moveTo(0, 320);
+    context.lineTo(180, 320);
+    context.lineTo(180, 640);
+    context.lineTo(560, 640);
+    context.moveTo(1080, 0);
+    context.lineTo(1080, 240);
+    context.lineTo(1280, 240);
+    context.moveTo(560, 0);
+    context.lineTo(560, 80);
+    context.lineTo(980, 80);
+    context.lineTo(980, 420);
     context.stroke();
     context.fillStyle = 'rgba(249, 115, 22, 0.4)';
-    const vias = [[420, 200], [420, 520], [900, 520], [900, 200], [300, 480], [300, 120], [760, 120], [760, 600]];
+    const vias = [[420, 200], [420, 520], [900, 520], [900, 200], [300, 480], [300, 120], [760, 120], [760, 600], [180, 320], [180, 640], [560, 640], [1080, 240], [560, 80], [980, 80], [980, 420]];
     for (let i = 0; i < vias.length; i += 1) {
       context.beginPath();
       context.arc(vias[i][0], vias[i][1], 5, 0, Math.PI * 2);
+      context.fill();
+    }
+    // Glowing floor nodes: small cyan points scattered on the grid so the empty
+    // stretches of arena read as circuitry, not blank space. Fixed positions,
+    // gentle pulse — dressing only, no gameplay.
+    const nodes = [[96, 96], [224, 288], [352, 416], [480, 96], [608, 288], [736, 544], [864, 160], [992, 384], [1120, 512], [160, 544], [640, 640], [1152, 64]];
+    for (let i = 0; i < nodes.length; i += 1) {
+      const pulse = 0.35 + 0.2 * Math.sin(time * 2 + i * 1.7);
+      context.fillStyle = `rgba(6, 182, 212, ${pulse})`;
+      context.beginPath();
+      context.arc(nodes[i][0], nodes[i][1], 3, 0, Math.PI * 2);
       context.fill();
     }
     // Hazard chevrons along the top and bottom edges.
@@ -135,7 +157,7 @@ export function createRenderer(canvas) {
         else context.lineTo(f.polygon[v].x, f.polygon[v].y);
       }
       context.closePath();
-      context.fillStyle = `rgba(6, 182, 212, ${0.22 + 0.18 * pulse * k})`;
+      context.fillStyle = `rgba(6, 182, 212, ${0.30 + 0.20 * pulse * k})`;
       context.fill();
       context.strokeStyle = `rgba(6, 182, 212, ${0.55 + 0.35 * pulse})`;
       context.lineWidth = 3;
@@ -222,6 +244,32 @@ export function createRenderer(canvas) {
     }
   }
 
+  /** Celebration sparks on the win screen: fixed positions, gentle pulse, drawn
+   *  under the panel so the victory frame is a celebration, not an empty grid. */
+  function drawWinSparks(time) {
+    const sparks = [
+      [120, 120, '#facc15'], [300, 90, '#06b6d4'], [520, 130, '#f97316'],
+      [760, 90, '#facc15'], [980, 130, '#06b6d4'], [1160, 110, '#f97316'],
+      [140, 620, '#06b6d4'], [360, 650, '#facc15'], [600, 620, '#f97316'],
+      [820, 650, '#06b6d4'], [1040, 620, '#facc15'], [1200, 640, '#06b6d4'],
+      [90, 360, '#f97316'], [1190, 360, '#facc15'],
+    ];
+    for (let i = 0; i < sparks.length; i += 1) {
+      const s = sparks[i];
+      const pulse = 0.45 + 0.4 * Math.sin(time * 3 + i * 1.3);
+      context.fillStyle = s[2];
+      context.globalAlpha = pulse;
+      context.beginPath();
+      context.arc(s[0], s[1], 5, 0, Math.PI * 2);
+      context.fill();
+      context.globalAlpha = pulse * 0.5;
+      context.beginPath();
+      context.arc(s[0], s[1], 10, 0, Math.PI * 2);
+      context.fill();
+    }
+    context.globalAlpha = 1;
+  }
+
   /** Paint one frame: floor, fields, trace, pickups, bots, player, particles, then HUD/panels. */
   function draw(world, screen, best) {
     const state = world.state;
@@ -237,6 +285,7 @@ export function createRenderer(canvas) {
     world.drawBots(context, state.time);
     if (state.phase !== 'attract') world.drawPlayer(context, state.time);
     world.particles.draw(context);
+    if (screen === SCREEN_WIN) drawWinSparks(state.time);
     // Hit flash: a red vignette that fades fast.
     if (state.hitFlash > 0) {
       context.fillStyle = `rgba(239, 68, 68, ${state.hitFlash * 0.18})`;

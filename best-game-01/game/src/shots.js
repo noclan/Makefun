@@ -285,15 +285,18 @@ export function stageShot(name, world) {
 
   if (name === 'loop') {
     // Play for real until a big surge lands, then freeze on that exact frame: the
-    // plasma field is at full life and the LOOP SURGE banner is up.
+    // plasma field is at full life and the LOOP SURGE banner is up. v2: demand a
+    // surge of 5+ with at least 2 pickups on the field, so the money shot shows
+    // the payoff (field + scrap), not an empty circle.
     world.reset();
     world.startWave(1);
-    const limit = 150 / STEP;
+    const limit = 180 / STEP;
     for (let i = 0; i < limit; i += 1) {
       pilot.update(STEP);
       world.step(STEP, pilot.control);
       const surge = world.state.lastSurge;
-      if (surge.time === world.state.time && surge.count >= 5 && world.state.wave >= 2) {
+      const pickups = world.pickups.filter((p) => p.active).length;
+      if (surge.time === world.state.time && surge.count >= 5 && pickups >= 2 && world.state.wave >= 2) {
         return { screen: SCREEN_PLAY, best: world.state.score };
       }
       if (world.state.phase === 'over' || world.state.phase === 'win') break;
@@ -324,16 +327,18 @@ export function stageShot(name, world) {
 
   // Play: a mid-wave action frame — freeze the instant a surge of two or more
   // lands mid-wave, so the plasma field is at full life, the LOOP SURGE banner is
-  // up, and bots are still on the field. A surge that also clears the wave does
-  // not count: the frame would show the shop instead.
+  // up, and bots are still on the field. v2: demand 3+ bots remaining, so the
+  // frame shows a swarm in play, not one straggler. A surge that also clears the
+  // wave does not count: the frame would show the shop instead.
   world.reset();
   world.startWave(1);
-  const limit = 60 / STEP;
+  const limit = 90 / STEP;
   for (let i = 0; i < limit; i += 1) {
     pilot.update(STEP);
     world.step(STEP, pilot.control);
     const surge = world.state.lastSurge;
-    if (surge.time === world.state.time && surge.count >= 2 && world.state.score >= 40 && world.state.phase === 'play') break;
+    const remaining = world.state.spawnQueue.length + world.bots.filter((b) => b.active).length;
+    if (surge.time === world.state.time && surge.count >= 2 && world.state.score >= 40 && world.state.phase === 'play' && remaining >= 3) break;
     if (world.state.phase === 'over' || world.state.phase === 'win') break;
   }
   return { screen: world.state.phase === 'over' ? SCREEN_OVER : SCREEN_PLAY, best: world.state.score };

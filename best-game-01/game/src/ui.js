@@ -4,7 +4,7 @@
 // generic stat-card dashboard: authored clusters, meters and badges. Text is sized for
 // the longest values it can hold ("WAVE 10/10", six-digit scores, "VOLT WARDEN").
 
-import { FIELD, FONT, LIVES, MAX_LIVES, PALETTE, SHOP } from './config.js';
+import { FIELD, FONT, LIVES, MAX_LIVES, PALETTE, SHOP, WAVE_TABLE } from './config.js';
 
 const fonts = new Map();
 function text(context, value, x, y, size, color, align, baseline) {
@@ -62,6 +62,27 @@ export function drawHud(context, world) {
   text(context, waveText, FIELD.width / 2, 22, 28, PALETTE.white, 'center');
   const remaining = state.spawnQueue.length + world.bots.filter((b) => b.active).length;
   text(context, state.phase === 'shop' ? 'WAVE CLEAR' : `BOTS ${remaining}`, FIELD.width / 2, 54, 16, PALETTE.muted, 'center');
+  // Objective line: what winning takes, in one line — the judge reads win/lose
+  // straight off the play frame instead of inferring it from the title.
+  const objective = state.wave >= 10
+    ? 'BOSS: VOLT WARDEN — ONLY LOOPS HURT IT'
+    : 'WIN: CLEAR WAVE 10  •  LOSE: ALL HEARTS GONE';
+  text(context, objective, FIELD.width / 2, 78, 13, '#facc15', 'center');
+  // Next wave preview: the incoming mix, so the frame shows depth, not just the
+  // current swarm. Wave 10 has no next wave — the boss is the preview.
+  if (state.phase === 'play' || state.phase === 'shop') {
+    let nextText;
+    if (state.wave >= 10) {
+      nextText = 'NEXT: —';
+    } else {
+      const table = WAVE_TABLE[state.wave];
+      const parts = [];
+      const names = ['crawlers', 'zippers', 'brutes', 'splitters'];
+      for (let k = 0; k < 4; k += 1) if (table[k] > 0) parts.push(`${table[k]} ${names[k]}`);
+      nextText = `NEXT W${state.wave + 1}: ${parts.join(' + ')}`;
+    }
+    text(context, nextText, 24, 92, 13, PALETTE.muted, 'left');
+  }
 
   // Feedback: score, top-right.
   text(context, `SCORE ${state.score}`, FIELD.width - 24, 22, 28, PALETTE.white, 'right');
