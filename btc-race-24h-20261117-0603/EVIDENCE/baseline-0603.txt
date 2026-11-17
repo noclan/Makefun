@@ -1,0 +1,8 @@
+0603: bars=1440 open=64433.84 close=64775.95 day_ret=53 bps  hi=65609.83 lo=63874.36
+   0828-bot: pnl=$-9.51 trades=2 rejected=0 maxDD=1.11%
+0828: bars=1440 open=67155.66 close=64523.80 day_ret=-392 bps  hi=67460.15 lo=62005.93
+   0828-bot: pnl=$22.79 trades=4 rejected=0 maxDD=0.93%
+2314: bars=1440 open=71406.58 close=67900.67 day_ret=-491 bps  hi=71423.57 lo=67626.92
+   0828-bot: pnl=$10.00 trades=2 rejected=0 maxDD=0.31%
+1439: bars=1439 open=73721.18 close=72044.01 day_ret=-228 bps  hi=74714.88 lo=71714.89
+   0828-bot: pnl=$0.00 trades=0 rejected=0 maxDD=0.00%

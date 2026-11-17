@@ -1,0 +1,10 @@
+--- run 1 (determinism check) ---
+0603: pnl=$6.624202 trades=2 rejected=0 maxDD=0.62% final=$1006.62
+0828: pnl=$11.260776 trades=6 rejected=0 maxDD=2.14% final=$1011.26
+2314: pnl=$-4.703780 trades=2 rejected=0 maxDD=0.99% final=$995.30
+1439: pnl=$0.000000 trades=0 rejected=0 maxDD=0.00% final=$1000.00
+--- run 2 (determinism check) ---
+0603: pnl=$6.624202 trades=2 rejected=0 maxDD=0.62% final=$1006.62
+0828: pnl=$11.260776 trades=6 rejected=0 maxDD=2.14% final=$1011.26
+2314: pnl=$-4.703780 trades=2 rejected=0 maxDD=0.99% final=$995.30
+1439: pnl=$0.000000 trades=0 rejected=0 maxDD=0.00% final=$1000.00
