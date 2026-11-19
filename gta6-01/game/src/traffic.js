@@ -1,110 +1,39 @@
-// Traffic: cars that follow the road grid, turn at intersections, slow
-// for the car ahead and get out of the way — loosely. They keep the city
-// alive and give the player something to weave through. v2 runs a busier
-// city: more cars on the road, and the top-up near the player is quicker,
-// so the streets never look empty in a screenshot or in live play.
+// Traffic AI: cars cruise the road grid, slow at junctions, avoid the player loosely.
+import { CFG } from './config.js';
+import { makeRng, rngPick, rngRange, clamp } from './random.js';
+import { makeCar } from './vehicles.js';
+import { randomRoadSpot } from './world.js';
 
-import { CAR_TYPES, WORLD } from './config.js';
-import { chance, pick, range } from './random.js';
-import { collideCarWithBuildings, makeCar, stepCar } from './vehicles.js';
-import { nearestRoadPoint, onRoad } from './world.js';
-
-function randomRoadCar(rng, city, nearX, nearY) {
-  const line = pick(rng, city.lines);
-  const along = range(rng, 200, WORLD.size - 200);
-  const vertical = chance(rng, 0.5);
-  const x = vertical ? line : along;
-  const y = vertical ? along : line;
-  const angle = vertical ? (chance(rng, 0.5) ? Math.PI / 2 : -Math.PI / 2) : (chance(rng, 0.5) ? 0 : Math.PI);
-  const type = pick(rng, ['sedan', 'sedan', 'taxi', 'van', 'sports']);
-  const car = makeCar(rng, type, x, y, angle);
-  car.driver = 'traffic';
-  // Each traffic car has a cruising speed and a lane offset so the road
-  // does not look like a parade.
-  car.cruise = CAR_TYPES[type].top * range(rng, 0.45, 0.65);
-  car.lane = (chance(rng, 0.5) ? 1 : -1) * 14;
-  car.turnAt = null;
-  return car;
-}
-
-export function spawnTraffic(rng, city, count, nearX, nearY) {
-  const cars = [];
-  let guard = 0;
-  while (cars.length < count && guard < count * 30) {
-    guard += 1;
-    const car = randomRoadCar(rng, city, nearX, nearY);
-    if (Math.hypot(car.x - nearX, car.y - nearY) < 320) continue;
-    if (car.y > WORLD.beachTop) continue;
-    cars.push(car);
+export function spawnTraffic(world, seed, count = 14) {
+  const rng = makeRng(seed + 31);
+  const list = [];
+  for (let i = 0; i < count; i++) {
+    const s = randomRoadSpot(rng, world);
+    const c = makeCar(rngPick(rng, ['sedan', 'taxi', 'van', 'pickup']), s.x, s.y, rng() < 0.5 ? 0 : Math.PI / 2);
+    c.parked = false; c.driver = 'traffic'; c.cruise = rngRange(rng, 130, 210); c.dir = rng() < 0.5 ? 1 : -1;
+    list.push(c);
   }
-  return cars;
+  return list;
 }
-
-// Steer a traffic car along its road: aim at a point ahead on the
-// centreline (shifted by its lane), and at an intersection sometimes pick
-// a new road.
-export function trafficSteer(rng, car, dt) {
-  const ahead = 90;
-  const tx = car.x + Math.cos(car.angle) * ahead;
-  const ty = car.y + Math.sin(car.angle) * ahead;
-  const road = nearestRoadPoint(tx, ty);
-  // Lane offset: keep right of the centreline in the direction of travel.
-  const sideX = Math.cos(car.angle + Math.PI / 2) * car.lane;
-  const sideY = Math.sin(car.angle + Math.PI / 2) * car.lane;
-  const want = Math.atan2(road.y + sideY - car.y, road.x + sideX - car.x);
-  let diff = want - car.angle;
-  while (diff > Math.PI) diff -= Math.PI * 2;
-  while (diff < -Math.PI) diff += Math.PI * 2;
-  return Math.max(-1, Math.min(1, diff * 2.2));
-}
-
-function carAhead(g, car) {
-  const fx = Math.cos(car.angle);
-  const fy = Math.sin(car.angle);
-  let closest = Infinity;
-  for (const other of g.cars) {
-    if (other === car) continue;
-    const dx = other.x - car.x;
-    const dy = other.y - car.y;
-    const along = dx * fx + dy * fy;
-    if (along < 0 || along > 110) continue;
-    const across = Math.abs(dx * -fy + dy * fx);
-    if (across < 30 && along < closest) closest = along;
-  }
-  return closest;
-}
-
-export function stepTraffic(g, dt) {
-  const rng = g.rng;
-  for (const car of g.cars) {
-    if (car.driver !== 'traffic') continue;
-    const steer = trafficSteer(rng, car, dt);
-    const gap = carAhead(g, car);
-    let throttle = 1;
-    if (gap < 70) throttle = 0;
-    else if (gap < 120) throttle = 0.3;
-    // Match the cruise speed: ease off the gas once there.
-    if (Math.abs(car.speed) > car.cruise) throttle = Math.min(throttle, 0);
-    stepCar(car, throttle, steer, dt, g.effects);
-    collideCarWithBuildings(g.city, car, g.effects);
-    // A traffic car that ends up far off-road or beached gets towed back
-    // to a road so the grid never empties out.
-    if (!onRoad(car.x, car.y) && Math.abs(car.speed) < 20) {
-      const road = nearestRoadPoint(car.x, car.y);
-      car.x = road.x;
-      car.y = road.y;
-    }
-  }
-  // Top the traffic back up near the player so the streets stay busy:
-  // at least fourteen cars within nine hundred units, refilled often —
-  // but never more than thirty-six traffic cars in the whole city, so a
-  // long session cannot spawn cars without end.
-  const near = g.cars.filter((c) => c.driver === 'traffic' && Math.hypot(c.x - g.player.x, c.y - g.player.y) < 900).length;
-  const trafficTotal = g.cars.filter((c) => c.driver === 'traffic').length;
-  if (near < 14 && trafficTotal < 36 && rng() < 0.05) {
-    const fresh = randomRoadCar(rng, g.city, g.player.x, g.player.y);
-    if (Math.hypot(fresh.x - g.player.x, fresh.y - g.player.y) > 500) {
-      g.cars.push(fresh);
-    }
+export function stepTraffic(state, dt) {
+  const { world, player } = state;
+  for (const c of state.traffic) {
+    // Pick a new heading at intersections.
+    const rnd = state.rng || Math.random;
+    const onX = Math.abs((c.x % CFG.roadGap) - CFG.roadW / 2) < 26;
+    const onY = Math.abs((c.y % CFG.roadGap) - CFG.roadW / 2) < 26;
+    if (onX && onY && rnd() < 0.01) c.angle = Math.floor(rnd() * 4) * Math.PI / 2;
+    // Slow for the player car ahead.
+    const px = player.inCar ? player.inCar.x : player.x, py = player.inCar ? player.inCar.y : player.y;
+    const d = Math.hypot(px - c.x, py - c.y);
+    const target = d < 130 ? c.cruise * 0.25 : c.cruise;
+    c.speed += clamp(target - c.speed, -260 * dt, 180 * dt);
+    const nx = c.x + Math.cos(c.angle) * c.speed * dt, ny = c.y + Math.sin(c.angle) * c.speed * dt;
+    const blocked = state.cars.some(o => o !== c && Math.hypot(o.x - nx, o.y - ny) < 52);
+    if (!blocked && nx > CFG.beachX && nx < CFG.world - 40 && ny > 40 && ny < CFG.world - 40) { c.x = nx; c.y = ny; }
+    else c.angle += Math.PI / 2;
+    // Wrap around the city edge so traffic never runs out.
+    if (c.x < CFG.beachX) c.x = CFG.world - 100; if (c.x > CFG.world - 60) c.x = CFG.beachX + 60;
+    if (c.y < 60) c.y = CFG.world - 100; if (c.y > CFG.world - 60) c.y = 60;
   }
 }

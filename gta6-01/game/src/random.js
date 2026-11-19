@@ -1,39 +1,19 @@
-// A small seeded random source (mulberry32) and the helpers the rest of
-// the game leans on. One seed, one city: the same seed always builds the
-// same Solmar Bay, which is what makes the staged screenshots repeatable.
-
+// Seeded RNG (mulberry32) so every fixed seed builds the same city.
 export function makeRng(seed) {
-  let state = seed | 0;
+  let a = (seed >>> 0) || 1;
   return function next() {
-    state = (state + 0x6d2b79f5) | 0;
-    let mix = Math.imul(state ^ (state >>> 15), 1 | state);
-    mix = (mix + Math.imul(mix ^ (mix >>> 7), 61 | mix)) ^ mix;
-    return ((mix ^ (mix >>> 14)) >>> 0) / 4294967296;
+    a |= 0; a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-
-export function range(rng, low, high) {
-  return low + rng() * (high - low);
-}
-
-export function int(rng, low, high) {
-  return low + Math.floor(rng() * (high - low + 1));
-}
-
-export function pick(rng, list) {
-  return list[Math.floor(rng() * list.length)];
-}
-
-export function chance(rng, probability) {
-  return rng() < probability;
-}
-
-export function shuffle(rng, list) {
-  for (let i = list.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(rng() * (i + 1));
-    const held = list[i];
-    list[i] = list[j];
-    list[j] = held;
-  }
-  return list;
-}
+export function rngRange(rng, lo, hi) { return lo + rng() * (hi - lo); }
+export function rngInt(rng, lo, hi) { return Math.floor(rngRange(rng, lo, hi + 1)); }
+export function rngPick(rng, arr) { return arr[Math.floor(rng() * arr.length)]; }
+export function rngChance(rng, p) { return rng() < p; }
+export function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+export function lerp(a, b, t) { return a + (b - a) * t; }
+export function dist2(ax, ay, bx, by) { const dx = ax - bx, dy = ay - by; return dx * dx + dy * dy; }
+export function angleTo(ax, ay, bx, by) { return Math.atan2(by - ay, bx - ax); }
+export function angleDiff(a, b) { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return d; }

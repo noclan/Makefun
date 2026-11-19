@@ -1,121 +1,58 @@
-// Combat: Rico's pistol, bullets, and the pickups scattered around
-// Solmar Bay — health kits, armour vests and ammo boxes. Shooting is
-// loud: it raises the heat and sends nearby pedestrians running.
+// Pistol combat: bullets, muzzle flash, pickups, health/armor.
+import { CFG } from './config.js';
+import { makeRng, rngRange, clamp } from './random.js';
+import { hurtPlayer } from './player.js';
 
-import { PISTOL, WANTED } from './config.js';
-import { chance, pick, range } from './random.js';
-import { scareNearby } from './pedestrians.js';
-
-export function spawnPickups(rng, city, count) {
-  const pickups = [];
-  const kinds = ['health', 'armor', 'ammo'];
-  let guard = 0;
-  while (pickups.length < count && guard < count * 30) {
-    guard += 1;
-    const line = pick(rng, city.lines);
-    const along = range(rng, 240, 2960);
-    const vertical = chance(rng, 0.5);
-    const side = chance(rng, 0.5) ? 1 : -1;
-    const x = vertical ? line + side * 44 : along;
-    const y = vertical ? along : line + side * 44;
-    if (y > 2880) continue;
-    pickups.push({ kind: pick(rng, kinds), x, y, bob: rng() * Math.PI * 2 });
+export function spawnPickups(world, seed) {
+  const rng = makeRng(seed + 91);
+  const list = [];
+  const kinds = ['health', 'armor', 'ammo', 'cash'];
+  for (let i = 0; i < 12; i++) {
+    list.push({ x: 500 + rng() * 2600, y: 200 + rng() * 2900, kind: kinds[i % 4], taken: false, bob: rngRange(rng, 0, 6) });
   }
-  return pickups;
+  return list;
 }
-
-export function firePistol(g, angle) {
-  const p = g.player;
-  if (p.car || p.ammo <= 0 || p.fireTimer > 0) return false;
-  p.fireTimer = PISTOL.fireCooldown;
-  p.ammo -= 1;
-  const mx = p.x + Math.cos(angle) * (p.radius + 10);
-  const my = p.y + Math.sin(angle) * (p.radius + 10);
-  g.bullets.push({
-    x: mx, y: my,
-    vx: Math.cos(angle) * PISTOL.bulletSpeed,
-    vy: Math.sin(angle) * PISTOL.bulletSpeed,
-    travelled: 0,
-    fromPlayer: true,
-  });
-  g.effects.muzzle(mx, my, angle);
-  if (g.audio) g.audio.shot();
-  g.wanted.heat += WANTED.shoot;
-  g.wanted.lastCrime = g.time;
-  scareNearby(g, p.x, p.y, 320);
-  return true;
-}
-
-function bulletHits(g, b) {
-  const targets = [];
-  for (const ped of g.peds) if (!ped.down) targets.push(ped);
-  for (const cop of g.cops) if (cop.kind === 'cop' && !cop.down) targets.push(cop);
-  for (const t of targets) {
-    const d = Math.hypot(t.x - b.x, t.y - b.y);
-    if (d < 16) return t;
+export function stepCombat(state, input, dt) {
+  const p = state.player;
+  state.shootCd = Math.max(0, (state.shootCd || 0) - dt);
+  // Aim with the mouse in the browser; in headless play the facing direction.
+  const aim = state.aimAngle != null ? state.aimAngle : p.facing;
+  if ((input.shoot || input.punch) && !p.inCar && p.ammo > 0 && state.shootCd <= 0 && (input.shoot || state.aimAngle != null)) {
+    if (!input.shoot) return;
+    p.ammo -= 1; state.shootCd = 0.22;
+    state.bullets.push({ x: p.x + Math.cos(aim) * 22, y: p.y + Math.sin(aim) * 22, vx: Math.cos(aim) * 780, vy: Math.sin(aim) * 780, life: 0.7 });
+    state.events.push({ kind: 'shot', x: p.x, y: p.y });
+    state.wanted = clamp(state.wanted + 0, 0, 5);
+    if (state.wanted < 1) state.wanted = 1;
+    state.muzzle = 0.06;
   }
-  return null;
-}
-
-export function stepBullets(g, dt) {
-  for (let i = g.bullets.length - 1; i >= 0; i -= 1) {
-    const b = g.bullets[i];
-    b.x += b.vx * dt;
-    b.y += b.vy * dt;
-    b.travelled += PISTOL.bulletSpeed * dt;
-    let dead = b.travelled > PISTOL.bulletRange;
-    if (!dead) {
-      const hit = bulletHits(g, b);
-      if (hit) {
-        hit.health -= PISTOL.damage;
-        g.effects.blood(hit.x, hit.y);
-        if (hit.kind === 'ped') {
-          hit.flee = true;
-          hit.fleeTimer = 4;
-          g.wanted.heat += WANTED.hitPed;
-          g.wanted.lastCrime = g.time;
-        } else {
-          g.wanted.heat += WANTED.hitCop;
-          g.wanted.lastCrime = g.time;
-        }
-        if (hit.health <= 0) {
-          hit.down = true;
-          hit.downTimer = 5;
-        }
-        dead = true;
-      }
+  state.muzzle = Math.max(0, (state.muzzle || 0) - dt);
+  for (const b of state.bullets) {
+    b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
+    for (const cop of state.cops) {
+      if (Math.hypot(cop.x - b.x, cop.y - b.y) < 20) { cop.hp -= 34; b.life = 0; state.events.push({ kind: 'hit', x: b.x, y: b.y }); if (cop.hp <= 0) state.wanted = clamp(state.wanted + 1, 0, 5); }
     }
-    if (dead) g.bullets.splice(i, 1);
-  }
-}
-
-export function stepPickups(g, dt) {
-  const p = g.player;
-  for (let i = g.pickups.length - 1; i >= 0; i -= 1) {
-    const item = g.pickups[i];
-    item.bob += dt * 3;
-    if (p.car) continue;
-    const d = Math.hypot(item.x - p.x, item.y - p.y);
-    if (d > 30) continue;
-    if (item.kind === 'health' && p.health < 100) {
-      p.health = Math.min(100, p.health + 40);
-      g.hudMessage = 'Health +40';
-    } else if (item.kind === 'armor' && p.armor < 50) {
-      p.armor = Math.min(50, p.armor + 25);
-      g.hudMessage = 'Armour +25';
-    } else if (item.kind === 'ammo' && p.ammo < PISTOL.ammoMax) {
-      p.ammo = Math.min(PISTOL.ammoMax, p.ammo + 12);
-      g.hudMessage = 'Ammo +12';
-    } else {
-      continue;
+    for (const ped of state.peds) {
+      if (ped.hp > 0 && Math.hypot(ped.x - b.x, ped.y - b.y) < 16) { ped.hp -= 34; ped.flee = 3; b.life = 0; }
     }
-    g.effects.burst(item.x, item.y, '#f2c94c', 10, 90, 0.5, 3);
-    if (g.audio) g.audio.pickup();
-    g.pickups.splice(i, 1);
   }
-  // Pickups slowly restock so the map never runs dry.
-  if (g.pickups.length < 6 && g.rng() < 0.004) {
-    const fresh = spawnPickups(g.rng, g.city, 1);
-    for (const item of fresh) g.pickups.push(item);
+  state.bullets = state.bullets.filter(b => b.life > 0);
+  state.cops = state.cops.filter(c => c.hp > 0);
+  // Pickups.
+  for (const pk of state.pickups) {
+    if (pk.taken) continue;
+    if (Math.hypot(pk.x - p.x, pk.y - p.y) < 30) {
+      pk.taken = true; state.events.push({ kind: 'pickup', what: pk.kind });
+      if (pk.kind === 'health') p.health = Math.min(100, p.health + 40);
+      if (pk.kind === 'armor') p.armor = Math.min(100, p.armor + 50);
+      if (pk.kind === 'ammo') p.ammo += 24;
+      if (pk.kind === 'cash') p.cash += 75;
+    }
+  }
+  // Cops shoot back when close and the player is on foot — slow, survivable fire.
+  state.copShootCd = Math.max(0, (state.copShootCd || 0) - dt);
+  if (state.cops.length && !p.inCar && state.wanted >= 2 && state.copShootCd <= 0) {
+    const near = state.cops.find(c => Math.hypot(c.x - p.x, c.y - p.y) < 260);
+    if (near) { state.copShootCd = 1.4; hurtPlayer(state, 5); state.events.push({ kind: 'cop-shot' }); }
   }
 }

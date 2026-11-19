@@ -1,96 +1,24 @@
-// Juice: particles, skid marks, floating score text and the camera shake.
-// Everything here is cosmetic — the sim never reads it — but it is what
-// makes a crash feel like a crash and a pickup feel like a reward.
+// Particles, skid marks, screen shake.
+import { makeRng } from './random.js';
 
-export function createEffects(rng) {
-  const particles = [];
-  const skids = [];
-  const floats = [];
-  let trauma = 0;
-
-  function burst(x, y, color, count, speed, life, size) {
-    for (let i = 0; i < count; i += 1) {
-      const angle = rng() * Math.PI * 2;
-      const v = speed * (0.4 + rng() * 0.6);
-      particles.push({
-        x, y,
-        vx: Math.cos(angle) * v,
-        vy: Math.sin(angle) * v,
-        life: life * (0.6 + rng() * 0.4),
-        maxLife: life,
-        size: size * (0.6 + rng() * 0.8),
-        color,
-      });
-    }
-    if (particles.length > 400) particles.splice(0, particles.length - 400);
+export function makeParticles() { return { list: [], skids: [], shake: 0 }; }
+export function burst(state, x, y, color, n = 10, speed = 160) {
+  const rnd = state.rng || Math.random;
+  for (let i = 0; i < n; i++) {
+    const a = rnd() * Math.PI * 2, s = speed * (0.4 + rnd() * 0.8);
+    state.particles.list.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.5 + rnd() * 0.4, max: 0.9, color, size: 2 + rnd() * 3 });
   }
-
-  function smoke(x, y) {
-    burst(x, y, '#8a8a8a', 3, 30, 0.9, 7);
-  }
-
-  function sparks(x, y) {
-    burst(x, y, '#ffd166', 10, 260, 0.35, 3);
-  }
-
-  function blood(x, y) {
-    burst(x, y, '#c0392b', 8, 140, 0.5, 4);
-  }
-
-  function muzzle(x, y, angle) {
-    for (let i = 0; i < 5; i += 1) {
-      const spread = (rng() - 0.5) * 0.5;
-      particles.push({
-        x, y,
-        vx: Math.cos(angle + spread) * 420,
-        vy: Math.sin(angle + spread) * 420,
-        life: 0.12, maxLife: 0.12, size: 3, color: '#ffe066',
-      });
-    }
-  }
-
-  function skidMark(x, y, angle, length) {
-    skids.push({ x, y, angle, length, life: 6 });
-    if (skids.length > 240) skids.shift();
-  }
-
-  function floatText(x, y, text, color) {
-    floats.push({ x, y, text, color, life: 1.4 });
-    if (floats.length > 24) floats.shift();
-  }
-
-  function shake(amount) {
-    trauma = Math.min(1, trauma + amount);
-  }
-
-  function shakeOffset() {
-    if (trauma <= 0) return { x: 0, y: 0 };
-    const power = trauma * trauma * 14;
-    return { x: (rng() * 2 - 1) * power, y: (rng() * 2 - 1) * power };
-  }
-
-  function step(dt) {
-    trauma = Math.max(0, trauma - dt * 1.6);
-    for (let i = particles.length - 1; i >= 0; i -= 1) {
-      const p = particles[i];
-      p.life -= dt;
-      if (p.life <= 0) { particles.splice(i, 1); continue; }
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
-      p.vx *= 0.92;
-      p.vy *= 0.92;
-    }
-    for (let i = skids.length - 1; i >= 0; i -= 1) {
-      skids[i].life -= dt;
-      if (skids[i].life <= 0) skids.splice(i, 1);
-    }
-    for (let i = floats.length - 1; i >= 0; i -= 1) {
-      const f = floats[i];
-      f.life -= dt;
-      f.y -= 34 * dt;
-      if (f.life <= 0) floats.splice(i, 1);
-    }
-  }
-
-  return { particles, skids, floats, burst, smoke, sparks, blood, muzzle, skidMark, floatText, shake, shakeOffset, step };
 }
+export function addSkid(state, x, y, angle) {
+  state.particles.skids.push({ x, y, angle, life: 6 });
+  if (state.particles.skids.length > 220) state.particles.skids.shift();
+}
+export function stepParticles(state, dt) {
+  for (const pt of state.particles.list) { pt.x += pt.vx * dt; pt.y += pt.vy * dt; pt.vx *= 0.94; pt.vy *= 0.94; pt.life -= dt; }
+  state.particles.list = state.particles.list.filter(p => p.life > 0);
+  for (const s of state.particles.skids) s.life -= dt;
+  state.particles.skids = state.particles.skids.filter(s => s.life > 0);
+  state.shake = Math.max(0, state.shake - dt * 22);
+  if (state.shake > 0) state.shake = Math.max(0, state.shake - dt * 8);
+}
+export function shake(state, amt) { state.shake = Math.max(state.shake, amt); }
